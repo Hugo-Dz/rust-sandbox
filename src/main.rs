@@ -1,5 +1,7 @@
 use bevy::prelude::*;
 use bevy::window::PresentMode;
+use rand::Rng;
+use std::time::Instant;
 
 #[derive(Component)]
 struct Cube;
@@ -20,9 +22,9 @@ fn main() {
                 })
                 .build(),
         )
-        //.insert_resource(ClearColor(Color::rgb(0.0, 0.0, 0.0)))
-        .add_systems(Startup, (setup, add_player))
-        .add_systems(Update, move_player)
+        .insert_resource(ClearColor(Color::rgb(0.0, 0.0, 0.0)))
+        .add_systems(Startup, setup)
+        .add_systems(Update, (add_grain, fly_grain))
         .run();
 }
 
@@ -31,37 +33,48 @@ fn setup(mut commands: Commands) {
     commands.spawn(Camera2dBundle::default());
 }
 
-fn add_player(mut commands: Commands, asset_server: Res<AssetServer>) {
-    let texture = asset_server.load("player.png");
+#[derive(Component)]
+struct Grain;
+
+#[derive(Component)]
+struct SpawnedTime(Instant);
+
+fn add_grain(
+    mut commands: Commands,
+    input: Res<Input<MouseButton>>,
+    asset_server: Res<AssetServer>,
+    query: Query<&Window>,
+    time: Res<Time>
+) {
+    let texture = asset_server.load("pixel.png");
     let sprite_bundle = SpriteBundle {
         sprite: Sprite {
-            custom_size: Some(Vec2::new(100.0, 100.0)),
+            custom_size: Some(Vec2::new(5.0, 5.0)),
             ..default()
         },
         texture,
         ..default()
     };
 
-    // Spawn a row (entity) with this set of components
-    commands.spawn((Player, sprite_bundle));
+    if let Some(position) = query.single().cursor_position() {
+        // Spawn a row (entity) with this set of components
+        if input.pressed(MouseButton::Left) {
+            commands.spawn((Grain, sprite_bundle, SpawnedTime(time.last_update().unwrap()))).insert(Transform {
+                translation: Vec3::new(position.x - 320.0, -(position.y - 240.0), 0.0),
+                ..default()
+            });
+        }
+    }
 }
 
-#[derive(Component)]
-struct Player;
+fn fly_grain(mut query: Query<(&mut Transform, &Grain, &SpawnedTime)>, time: Res<Time>) {
+    for (mut transform, _, spawned_time) in query.iter_mut() {
 
-fn move_player(time: Res<Time>, input: Res<Input<KeyCode>>, mut query: Query<(&mut Transform, &Player)>) {
-    for (mut transform, _) in query.iter_mut() {
-        if input.pressed(KeyCode::Up) {
-            transform.translation.y += 100.0 * time.delta_seconds();
-        }
-        if input.pressed(KeyCode::Down) {
-            transform.translation.y -= 100.0 * time.delta_seconds();
-        }
-        if input.pressed(KeyCode::Right) {
-            transform.translation.x += 100.0 * time.delta_seconds();
-        }
-        if input.pressed(KeyCode::Left) {
-            transform.translation.x -= 100.0 * time.delta_seconds();
-        }
+        let time_since_spawn = Instant::now().duration_since(spawned_time.0).as_secs_f32();
+
+        let mut rng = rand::thread_rng();
+        let rand_x: f32 = rng.gen_range(-150.0..150.0) + time_since_spawn;
+        transform.translation.y -= 100.0 * time.delta_seconds();
+        transform.translation.x -= rand_x * time.delta_seconds();
     }
 }
