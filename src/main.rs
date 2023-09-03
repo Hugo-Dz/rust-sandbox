@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use bevy::window::PresentMode;
+use rand::Rng;
 
 #[derive(Component, PartialEq, Eq, Hash, Clone, Copy)]
 struct GridPosition(i32, i32);
@@ -45,9 +46,8 @@ struct Grain;
 enum Type {
     Sand,
     _Rock,
-    _Water
+    _Water,
 }
-
 
 fn add_grain(
     mut commands: Commands,
@@ -55,7 +55,16 @@ fn add_grain(
     asset_server: Res<AssetServer>,
     query: Query<&Window>,
 ) {
-    let texture = asset_server.load("pixel.png");
+
+    let sand_textures: [Handle<Image>; 3] = [
+        asset_server.load("sand1.png"),
+        asset_server.load("sand2.png"),
+        asset_server.load("sand3.png"),
+    ];
+    let mut rng = rand::thread_rng();
+    let random_index = rng.gen_range(0..sand_textures.len());
+    let texture = sand_textures[random_index].clone();
+
     let sprite_bundle = SpriteBundle {
         sprite: Sprite {
             custom_size: Some(Vec2::new(GRAIN_SIZE, GRAIN_SIZE)),
@@ -66,16 +75,22 @@ fn add_grain(
     };
 
     if let Some(position) = query.single().cursor_position() {
-        
         if input.pressed(MouseButton::Left) {
             let grid_x = ((position.x - 320.0) / GRAIN_SIZE).floor() as i32;
             let grid_y = (-(position.y - 240.0) / GRAIN_SIZE).floor() as i32;
             let grid_position = GridPosition(grid_x, grid_y);
             // Add a row (entity) with this set of components
-            commands.spawn((Grain, sprite_bundle, grid_position, Type::Sand)).insert(Transform {
-                translation: Vec3::new(grid_position.0 as f32 * GRAIN_SIZE + (GRAIN_SIZE / 2.0), grid_position.1 as f32 * GRAIN_SIZE + (GRAIN_SIZE / 2.0), 0.0),
-                ..default()
-            });
+            commands
+                .spawn((Grain, sprite_bundle, grid_position, Type::Sand))
+                .insert(Transform {
+                    translation: Vec3::new(
+                        grid_position.0 as f32 * GRAIN_SIZE + (GRAIN_SIZE / 2.0),
+                        grid_position.1 as f32 * GRAIN_SIZE + (GRAIN_SIZE / 2.0),
+                        0.0,
+                    ),
+                    //rotation: Quat::from_vec4(Vec4::new(0.0, 0.0, 0.0, 0.0)),
+                    ..default()
+                });
         }
     }
 }
@@ -95,6 +110,10 @@ fn drop_grain(mut query: Query<(&mut GridPosition, &Grain)>, mut counter: ResMut
 
 fn update_transform(mut query: Query<(&mut Transform, &GridPosition, &Grain)>) {
     for (mut transform, grid_position, _) in query.iter_mut() {
-        transform.translation = Vec3::new(grid_position.0 as f32 * GRAIN_SIZE + (GRAIN_SIZE / 2.0), grid_position.1 as f32 * GRAIN_SIZE + (GRAIN_SIZE / 2.0), 0.0);
+        transform.translation = Vec3::new(
+            grid_position.0 as f32 * GRAIN_SIZE + (GRAIN_SIZE / 2.0),
+            grid_position.1 as f32 * GRAIN_SIZE + (GRAIN_SIZE / 2.0),
+            0.0,
+        );
     }
 }
