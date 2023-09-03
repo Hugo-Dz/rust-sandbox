@@ -67,7 +67,9 @@ fn main() {
         .insert_resource(TickCounter { count: 0, tick_rate: 1 })
         .insert_resource(Grid::new())
         .add_systems(Startup, setup)
-        .add_systems(Update, (add_grain, drop_grain, update_grid_data))
+        .add_systems(Update, add_grain)
+        .add_systems(Update, grain_update_system)
+        .add_systems(Update, update_grid_data)
         .run();
 }
 
@@ -83,7 +85,7 @@ fn setup(mut commands: Commands) {
 struct Grain;
 
 #[derive(Component)]
-struct Name;
+struct Lifetime(u32);
 
 #[derive(Component, Clone, Copy, Debug)]
 enum GrainType {
@@ -134,6 +136,7 @@ fn add_grain(
             commands
                 .spawn((
                     Grain,
+                    Lifetime(0),
                     sprite_bundle,
                     GrainType::Sand,
                     GridPosition {
@@ -155,31 +158,86 @@ fn add_grain(
     }
 }
 
-fn drop_grain(
-    mut query: Query<(&mut Transform, &mut GridPosition)>,
-    mut tick_counter: ResMut<TickCounter>,
+fn grain_update_system(
     grid_data: Res<Grid>,
+    mut query: Query<(&mut Transform, &mut GridPosition, &GrainType, &mut Lifetime)>,
+    mut tick_counter: ResMut<TickCounter>,
 ) {
     tick_counter.count += 1;
-
     if tick_counter.count >= tick_counter.tick_rate {
         tick_counter.count = 0;
+        for (mut transform, mut grid_position, grain_type, mut lifetime) in query.iter_mut() {
+            lifetime.0 += 1;
+            match grain_type {
+                GrainType::Sand => handle_sand_grain(&mut transform, &mut grid_position, &grid_data, lifetime.0),
+                GrainType::_Rock => { /* handle rock logic */ }
+                GrainType::_Water => { /* handle water logic */ }
+            }
+        }
+    }
+}
 
-        for (mut transform, mut grid_position) in query.iter_mut() {
-            if transform.translation.y >= -(GAME_RESOLUTION_Y as f32 / 2.0 - 2.0) {
-                // Check if there is no grain below
-                if grid_data
-                    .get(grid_position.current_x as usize, (grid_position.current_y + 1) as usize)
-                    .is_none()
-                {
-                    transform.translation.y -= 1.0;
+fn handle_sand_grain(transform: &mut Transform, grid_position: &mut GridPosition, grid_data: &Grid, lifetime: u32) {
+    // Ensure coordinates are in the grid
+    if grid_position.current_x >= 0
+        && grid_position.current_x < GAME_RESOLUTION_X as i32 - 1
+        && grid_position.current_y >= 0
+        && grid_position.current_y < GAME_RESOLUTION_Y as i32 - 1
+    {
+        let maybe_grain_below = grid_data.get(grid_position.current_x as usize, (grid_position.current_y + 1) as usize);
+        let maybe_grain_right = grid_data.get((grid_position.current_x + 1) as usize, grid_position.current_y as usize);
+        let maybe_grain_left = grid_data.get((grid_position.current_x - 1) as usize, grid_position.current_y as usize);
 
-                    // Update grid_position
-                    grid_position.prev_x = Some(grid_position.current_x);
-                    grid_position.prev_y = Some(grid_position.current_y);
+        let mut rng = rand::thread_rng();
+        let random_number = rng.gen::<f64>();
 
-                    grid_position.current_y += 1;
+        match maybe_grain_below {
+            Some(_) => {
+                if lifetime > 500 {
+                    return;
                 }
+                // There is a grain below, try moving
+                match (maybe_grain_left, maybe_grain_right) {
+                    (Some(_), None) => {
+                        if random_number < 0.01 {
+                            transform.translation.x += 1.0;
+                            grid_position.prev_x = Some(grid_position.current_x);
+                            grid_position.prev_y = Some(grid_position.current_y);
+                            grid_position.current_x += 1;
+                        }
+                    }
+                    (None, Some(_)) => {
+                        if random_number < 0.01 {
+                            transform.translation.x -= 1.0;
+                            grid_position.prev_x = Some(grid_position.current_x);
+                            grid_position.prev_y = Some(grid_position.current_y);
+                            grid_position.current_x -= 1;
+                        }
+                    }
+                    (None, None) => {
+                        if random_number < 0.80 {
+                            if random_number < 0.40 {
+                                transform.translation.x += 1.0;
+                                grid_position.prev_x = Some(grid_position.current_x);
+                                grid_position.prev_y = Some(grid_position.current_y);
+                                grid_position.current_x += 1;
+                            } else {
+                                transform.translation.x -= 1.0;
+                                grid_position.prev_x = Some(grid_position.current_x);
+                                grid_position.prev_y = Some(grid_position.current_y);
+                                grid_position.current_x -= 1;
+                            }
+                        }
+                    }
+                    (Some(_), Some(_)) => {}
+                }
+            }
+            None => {
+                // No grain below, just fall
+                transform.translation.y -= 1.0;
+                grid_position.prev_x = Some(grid_position.current_x);
+                grid_position.prev_y = Some(grid_position.current_y);
+                grid_position.current_y += 1;
             }
         }
     }
@@ -189,13 +247,20 @@ fn update_grid_data(mut query: Query<(&GrainType, &mut GridPosition)>, mut grid_
     for (grain_type, mut pos) in query.iter_mut() {
         // Clear the previous position from the grid
         if let (Some(prev_x), Some(prev_y)) = (pos.prev_x, pos.prev_y) {
-            if prev_x >= 0 && prev_y >= 0 {
+            if prev_x >= 0 && prev_y >= 0 && prev_x < GAME_RESOLUTION_X as i32 && prev_y < GAME_RESOLUTION_Y as i32 {
                 grid_data.data[prev_y as usize][prev_x as usize] = None;
             }
         }
 
-        // Update the grid with the new position
-        grid_data.set(pos.current_x as usize, pos.current_y as usize, *grain_type);
+        // Boundary checks for current positions
+        if pos.current_x >= 0
+            && pos.current_x < GAME_RESOLUTION_X as i32
+            && pos.current_y >= 0
+            && pos.current_y < GAME_RESOLUTION_Y as i32
+        {
+            // Update the grid with the new position
+            grid_data.set(pos.current_x as usize, pos.current_y as usize, *grain_type);
+        }
 
         // Update prev for next frame
         pos.prev_x = Some(pos.current_x);
