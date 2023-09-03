@@ -103,7 +103,6 @@ fn drop_grain(mut query: Query<(&mut Transform, &Grain)>, mut tick_counter: ResM
 
         for (mut transform, _) in query.iter_mut() {
             if transform.translation.y >= -28.0 {
-                println!("Pos y: {} ", transform.translation.y);
                 transform.translation.y -= 1.0;
             }
         }
