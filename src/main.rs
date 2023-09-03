@@ -1,20 +1,19 @@
 use bevy::prelude::*;
 use bevy::window::PresentMode;
+use bevy_pixel_camera::{PixelCameraBundle, PixelCameraPlugin};
 use rand::Rng;
-
-#[derive(Component, PartialEq, Eq, Hash, Clone, Copy)]
-struct GridPosition(i32, i32);
+use bevy::math::Vec2;
+use bevy::sprite::Anchor;
 
 #[derive(Resource)]
-struct GrainDropCounter {
+struct TickCounter {
     count: u32,
+    tick_rate: u32,
 }
-
-const GRAIN_SIZE: f32 = 10.0;
 
 fn main() {
     App::new()
-        .add_plugins(
+        .add_plugins((
             DefaultPlugins
                 .set(ImagePlugin::default_nearest())
                 .set(WindowPlugin {
@@ -27,16 +26,17 @@ fn main() {
                     ..default()
                 })
                 .build(),
-        )
+            PixelCameraPlugin,
+        ))
         .insert_resource(ClearColor(Color::rgb(0.0, 0.0, 0.0)))
-        .insert_resource(GrainDropCounter { count: 0 })
+        .insert_resource(TickCounter { count: 0, tick_rate: 1 })
         .add_systems(Startup, setup)
-        .add_systems(Update, (add_grain, drop_grain, update_transform))
+        .add_systems(Update, (add_grain, drop_grain))
         .run();
 }
 
 fn setup(mut commands: Commands) {
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn(PixelCameraBundle::from_resolution(80, 60, true));
 }
 
 #[derive(Component)]
@@ -49,13 +49,20 @@ enum Type {
     _Water,
 }
 
+fn remap_cursor_position(pos: Vec2) -> Vec2 {
+    let new_x = (pos.x / 640.0) * 80.0;
+    let new_y = (pos.y / 480.0) * 60.0;
+
+    println!("Remaped pos: x: {}, y: {} ", new_x, new_y);
+    Vec2::new(new_x, new_y)
+}
+
 fn add_grain(
     mut commands: Commands,
     input: Res<Input<MouseButton>>,
     asset_server: Res<AssetServer>,
     query: Query<&Window>,
 ) {
-
     let sand_textures: [Handle<Image>; 3] = [
         asset_server.load("sand1.png"),
         asset_server.load("sand2.png"),
@@ -67,7 +74,8 @@ fn add_grain(
 
     let sprite_bundle = SpriteBundle {
         sprite: Sprite {
-            custom_size: Some(Vec2::new(GRAIN_SIZE, GRAIN_SIZE)),
+            custom_size: Some(Vec2::new(1.0, 1.0)),
+            anchor: Anchor::TopLeft,
             ..default()
         },
         texture,
@@ -76,44 +84,28 @@ fn add_grain(
 
     if let Some(position) = query.single().cursor_position() {
         if input.pressed(MouseButton::Left) {
-            let grid_x = ((position.x - 320.0) / GRAIN_SIZE).floor() as i32;
-            let grid_y = (-(position.y - 240.0) / GRAIN_SIZE).floor() as i32;
-            let grid_position = GridPosition(grid_x, grid_y);
+            let remaped_cursor_pos = remap_cursor_position(position);
             // Add a row (entity) with this set of components
-            commands
-                .spawn((Grain, sprite_bundle, grid_position, Type::Sand))
-                .insert(Transform {
-                    translation: Vec3::new(
-                        grid_position.0 as f32 * GRAIN_SIZE + (GRAIN_SIZE / 2.0),
-                        grid_position.1 as f32 * GRAIN_SIZE + (GRAIN_SIZE / 2.0),
-                        0.0,
-                    ),
-                    //rotation: Quat::from_vec4(Vec4::new(0.0, 0.0, 0.0, 0.0)),
-                    ..default()
-                });
+            commands.spawn((Grain, sprite_bundle, Type::Sand)).insert(Transform {
+                translation: Vec3::new(remaped_cursor_pos.x.round() - 40.0, -(remaped_cursor_pos.y.round() - 30.0), 0.0),
+                ..default()
+            });
         }
     }
 }
 
-fn drop_grain(mut query: Query<(&mut GridPosition, &Grain)>, mut counter: ResMut<GrainDropCounter>) {
-    counter.count += 1;
+fn drop_grain(mut query: Query<(&mut Transform, &Grain)>, mut tick_counter: ResMut<TickCounter>) {
+    tick_counter.count += 1;
 
-    if counter.count >= 5 {
-        for (mut grid_position, _) in query.iter_mut() {
-            if grid_position.1 > -(240.0 / GRAIN_SIZE) as i32 {
-                grid_position.1 -= 1;
+    if tick_counter.count >= tick_counter.tick_rate {
+
+        tick_counter.count = 0;
+
+        for (mut transform, _) in query.iter_mut() {
+            if transform.translation.y >= -28.0 {
+                println!("Pos y: {} ", transform.translation.y);
+                transform.translation.y -= 1.0;
             }
         }
-        counter.count = 0;
-    }
-}
-
-fn update_transform(mut query: Query<(&mut Transform, &GridPosition, &Grain)>) {
-    for (mut transform, grid_position, _) in query.iter_mut() {
-        transform.translation = Vec3::new(
-            grid_position.0 as f32 * GRAIN_SIZE + (GRAIN_SIZE / 2.0),
-            grid_position.1 as f32 * GRAIN_SIZE + (GRAIN_SIZE / 2.0),
-            0.0,
-        );
     }
 }

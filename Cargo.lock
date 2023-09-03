@@ -493,6 +493,7 @@ name = "bevy_empty"
 version = "0.1.0"
 dependencies = [
  "bevy",
+ "bevy_pixel_camera",
  "rand",
 ]
 
@@ -709,6 +710,15 @@ dependencies = [
  "bytemuck",
  "naga_oil",
  "radsort",
+]
+
+[[package]]
+name = "bevy_pixel_camera"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "44e8b762591fc85d3063eca322b491de06456be6ae28cce0d55258e399860c65"
+dependencies = [
+ "bevy",
 ]
 
 [[package]]
