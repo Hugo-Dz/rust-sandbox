@@ -39,7 +39,7 @@ impl Grid {
     }
 
     pub fn set(&mut self, x: usize, y: usize, value: GrainType) {
-        if x < 80 && y < 60 {
+        if x < GAME_RESOLUTION_X && y < GAME_RESOLUTION_Y {
             self.data[y][x] = Some(value);
         }
     }
