@@ -5,6 +5,8 @@ use rand::Rng;
 use bevy::math::Vec2;
 use bevy::sprite::Anchor;
 
+const GAME_RESOLUTION: [i32; 2] = [160, 120];
+
 #[derive(Resource)]
 struct TickCounter {
     count: u32,
@@ -20,6 +22,7 @@ fn main() {
                     primary_window: Some(Window {
                         title: "Bevy".into(),
                         resolution: (640., 480.).into(),
+                        resizable: false,
                         present_mode: PresentMode::AutoVsync,
                         ..default()
                     }),
@@ -36,7 +39,7 @@ fn main() {
 }
 
 fn setup(mut commands: Commands) {
-    commands.spawn(PixelCameraBundle::from_resolution(80, 60, true));
+    commands.spawn(PixelCameraBundle::from_resolution(GAME_RESOLUTION[0], GAME_RESOLUTION[1], true));
 }
 
 #[derive(Component)]
@@ -50,8 +53,8 @@ enum Type {
 }
 
 fn remap_cursor_position(pos: Vec2) -> Vec2 {
-    let new_x = (pos.x / 640.0) * 80.0;
-    let new_y = (pos.y / 480.0) * 60.0;
+    let new_x = (pos.x / 640.0) * GAME_RESOLUTION[0] as f32;
+    let new_y = (pos.y / 480.0) * GAME_RESOLUTION[1] as f32;
     Vec2::new(new_x, new_y)
 }
 
@@ -85,7 +88,7 @@ fn add_grain(
             let remaped_cursor_pos = remap_cursor_position(position);
             // Add a row (entity) with this set of components
             commands.spawn((Grain, sprite_bundle, Type::Sand)).insert(Transform {
-                translation: Vec3::new(remaped_cursor_pos.x.round() - 40.0, -(remaped_cursor_pos.y.round() - 30.0), 0.0),
+                translation: Vec3::new(remaped_cursor_pos.x.round() - (GAME_RESOLUTION[0] as f32 / 2.0), -(remaped_cursor_pos.y.round() - (GAME_RESOLUTION[1] as f32 / 2.0)), 0.0),
                 ..default()
             });
         }
@@ -100,7 +103,7 @@ fn drop_grain(mut query: Query<(&mut Transform, &Grain)>, mut tick_counter: ResM
         tick_counter.count = 0;
 
         for (mut transform, _) in query.iter_mut() {
-            if transform.translation.y >= -28.0 {
+            if transform.translation.y >= -(GAME_RESOLUTION[1] as f32 / 2.0 - 2.0) {
                 transform.translation.y -= 1.0;
             }
         }
