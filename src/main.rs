@@ -1,11 +1,15 @@
+mod utils;
+
 use bevy::prelude::*;
 use bevy::window::PresentMode;
 use bevy_pixel_camera::{PixelCameraBundle, PixelCameraPlugin};
 use rand::Rng;
 use bevy::math::Vec2;
 use bevy::sprite::Anchor;
+use crate::utils::remap::remap_cursor_position;
 
-const GAME_RESOLUTION: [i32; 2] = [160, 120];
+const GAME_RESOLUTION: [i32; 2] = [80, 60];
+const WINDOW_SIZE: [f32; 2] = [640.0, 480.0];
 
 #[derive(Resource)]
 struct TickCounter {
@@ -21,7 +25,7 @@ fn main() {
                 .set(WindowPlugin {
                     primary_window: Some(Window {
                         title: "Bevy".into(),
-                        resolution: (640., 480.).into(),
+                        resolution: (WINDOW_SIZE[0], WINDOW_SIZE[1]).into(),
                         resizable: false,
                         present_mode: PresentMode::AutoVsync,
                         ..default()
@@ -52,12 +56,6 @@ enum Type {
     _Water,
 }
 
-fn remap_cursor_position(pos: Vec2) -> Vec2 {
-    let new_x = (pos.x / 640.0) * GAME_RESOLUTION[0] as f32;
-    let new_y = (pos.y / 480.0) * GAME_RESOLUTION[1] as f32;
-    Vec2::new(new_x, new_y)
-}
-
 fn add_grain(
     mut commands: Commands,
     input: Res<Input<MouseButton>>,
@@ -85,7 +83,7 @@ fn add_grain(
 
     if let Some(position) = query.single().cursor_position() {
         if input.pressed(MouseButton::Left) {
-            let remaped_cursor_pos = remap_cursor_position(position);
+            let remaped_cursor_pos = remap_cursor_position(position, WINDOW_SIZE, GAME_RESOLUTION);
             // Add a row (entity) with this set of components
             commands.spawn((Grain, sprite_bundle, Type::Sand)).insert(Transform {
                 translation: Vec3::new(remaped_cursor_pos.x.round() - (GAME_RESOLUTION[0] as f32 / 2.0), -(remaped_cursor_pos.y.round() - (GAME_RESOLUTION[1] as f32 / 2.0)), 0.0),
