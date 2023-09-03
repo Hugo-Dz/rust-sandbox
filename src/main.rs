@@ -24,7 +24,7 @@ fn main() {
                 .set(ImagePlugin::default_nearest())
                 .set(WindowPlugin {
                     primary_window: Some(Window {
-                        title: "Bevy".into(),
+                        title: "Sandy".into(),
                         resolution: (WINDOW_SIZE[0], WINDOW_SIZE[1]).into(),
                         resizable: false,
                         present_mode: PresentMode::AutoVsync,

@@ -1,5 +1,5 @@
 [package]
-name = "bevy_empty"
+name = "sandbox_bevy"
 version = "0.1.0"
 edition = "2021"
 
