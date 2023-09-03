@@ -52,8 +52,6 @@ enum Type {
 fn remap_cursor_position(pos: Vec2) -> Vec2 {
     let new_x = (pos.x / 640.0) * 80.0;
     let new_y = (pos.y / 480.0) * 60.0;
-
-    println!("Remaped pos: x: {}, y: {} ", new_x, new_y);
     Vec2::new(new_x, new_y)
 }
 
