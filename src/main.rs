@@ -9,6 +9,8 @@ struct GrainDropCounter {
     count: u32,
 }
 
+const GRAIN_SIZE: f32 = 10.0;
+
 fn main() {
     App::new()
         .add_plugins(
@@ -39,6 +41,14 @@ fn setup(mut commands: Commands) {
 #[derive(Component)]
 struct Grain;
 
+#[derive(Component)]
+enum Type {
+    Sand,
+    _Rock,
+    _Water
+}
+
+
 fn add_grain(
     mut commands: Commands,
     input: Res<Input<MouseButton>>,
@@ -48,7 +58,7 @@ fn add_grain(
     let texture = asset_server.load("pixel.png");
     let sprite_bundle = SpriteBundle {
         sprite: Sprite {
-            custom_size: Some(Vec2::new(10.0, 10.0)),
+            custom_size: Some(Vec2::new(GRAIN_SIZE, GRAIN_SIZE)),
             ..default()
         },
         texture,
@@ -56,13 +66,14 @@ fn add_grain(
     };
 
     if let Some(position) = query.single().cursor_position() {
-        // Spawn a grain with this set of components
+        
         if input.pressed(MouseButton::Left) {
-            let grid_x = ((position.x - 320.0) / 10.0).floor() as i32;
-            let grid_y = (-(position.y - 240.0) / 10.0).floor() as i32;
+            let grid_x = ((position.x - 320.0) / GRAIN_SIZE).floor() as i32;
+            let grid_y = (-(position.y - 240.0) / GRAIN_SIZE).floor() as i32;
             let grid_position = GridPosition(grid_x, grid_y);
-            commands.spawn((Grain, sprite_bundle, grid_position)).insert(Transform {
-                translation: Vec3::new(grid_position.0 as f32 * 10.0, grid_position.1 as f32 * 10.0, 0.0),
+            // Add a row (entity) with this set of components
+            commands.spawn((Grain, sprite_bundle, grid_position, Type::Sand)).insert(Transform {
+                translation: Vec3::new(grid_position.0 as f32 * GRAIN_SIZE + (GRAIN_SIZE / 2.0), grid_position.1 as f32 * GRAIN_SIZE + (GRAIN_SIZE / 2.0), 0.0),
                 ..default()
             });
         }
@@ -73,19 +84,17 @@ fn drop_grain(mut query: Query<(&mut GridPosition, &Grain)>, mut counter: ResMut
     counter.count += 1;
 
     if counter.count >= 5 {
-        // Update position every 10 frames
         for (mut grid_position, _) in query.iter_mut() {
-            if grid_position.1 > (-240 + 5) / 10 {
-                // Check if above ground
+            if grid_position.1 > -(240.0 / GRAIN_SIZE) as i32 {
                 grid_position.1 -= 1;
             }
         }
-        counter.count = 0; // Reset the counter
+        counter.count = 0;
     }
 }
 
 fn update_transform(mut query: Query<(&mut Transform, &GridPosition, &Grain)>) {
     for (mut transform, grid_position, _) in query.iter_mut() {
-        transform.translation = Vec3::new(grid_position.0 as f32 * 10.0, grid_position.1 as f32 * 10.0, 0.0);
+        transform.translation = Vec3::new(grid_position.0 as f32 * GRAIN_SIZE + (GRAIN_SIZE / 2.0), grid_position.1 as f32 * GRAIN_SIZE + (GRAIN_SIZE / 2.0), 0.0);
     }
 }
