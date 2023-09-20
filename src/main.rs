@@ -133,7 +133,12 @@ fn add_grain(
         ..default()
     };
 
-    let water_texture: Handle<Image> = asset_server.load("water1.png");
+    let water_textures: [Handle<Image>; 3] = [
+        asset_server.load("water1.png"),
+        asset_server.load("water2.png"),
+        asset_server.load("water3.png"),
+    ];
+    let water_texture = water_textures[random_index].clone();
 
     let water_sprite_bundle = SpriteBundle {
         sprite: Sprite {
