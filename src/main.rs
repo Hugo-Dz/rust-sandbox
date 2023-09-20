@@ -68,7 +68,7 @@ fn main() {
         .insert_resource(Grid::new())
         .add_systems(Startup, setup)
         .add_systems(Update, add_grain)
-        .add_systems(Update, grain_update_system)
+        .add_systems(Update, update_grain_system)
         .add_systems(Update, update_grid_data)
         .run();
 }
@@ -91,7 +91,7 @@ struct Lifetime(u32);
 enum GrainType {
     Sand,
     _Rock,
-    _Water,
+    Water,
 }
 
 #[derive(Component)]
@@ -100,6 +100,12 @@ struct GridPosition {
     current_y: i32,
     prev_x: Option<i32>,
     prev_y: Option<i32>,
+}
+
+#[derive(Component, PartialEq)]
+enum LastDirection {
+    Right,
+    Left,
 }
 
 fn add_grain(
@@ -115,30 +121,75 @@ fn add_grain(
     ];
     let mut rng = rand::thread_rng();
     let random_index = rng.gen_range(0..sand_textures.len());
-    let texture = sand_textures[random_index].clone();
+    let sand_texture = sand_textures[random_index].clone();
 
-    let sprite_bundle = SpriteBundle {
+    let sand_sprite_bundle = SpriteBundle {
         sprite: Sprite {
             custom_size: Some(Vec2::new(1.0, 1.0)),
             anchor: Anchor::TopLeft,
             ..default()
         },
-        texture,
+        texture: sand_texture,
+        ..default()
+    };
+
+    let water_texture: Handle<Image> = asset_server.load("water1.png");
+
+    let water_sprite_bundle = SpriteBundle {
+        sprite: Sprite {
+            custom_size: Some(Vec2::new(1.0, 1.0)),
+            anchor: Anchor::TopLeft,
+            ..default()
+        },
+        texture: water_texture,
         ..default()
     };
 
     if let Some(position) = query.single().cursor_position() {
+        let remaped_cursor_pos = remap_cursor_position(position, WINDOW_SIZE, [GAME_RESOLUTION_X, GAME_RESOLUTION_Y]);
+
         if input.pressed(MouseButton::Left) {
-            let remaped_cursor_pos =
-                remap_cursor_position(position, WINDOW_SIZE, [GAME_RESOLUTION_X, GAME_RESOLUTION_Y]);
-            //println!("{}", remaped_cursor_pos);
             // Add a row (entity) with this set of components
             commands
                 .spawn((
                     Grain,
                     Lifetime(0),
-                    sprite_bundle,
+                    sand_sprite_bundle,
                     GrainType::Sand,
+                    GridPosition {
+                        current_x: remaped_cursor_pos.x.round() as i32,
+                        current_y: remaped_cursor_pos.y.round() as i32,
+                        prev_x: None,
+                        prev_y: None,
+                    },
+                ))
+                .insert(Transform {
+                    translation: Vec3::new(
+                        remaped_cursor_pos.x.round() - (GAME_RESOLUTION_X as f32 / 2.0),
+                        -(remaped_cursor_pos.y.round() - (GAME_RESOLUTION_Y as f32 / 2.0)),
+                        0.0,
+                    ),
+                    ..default()
+                });
+        }
+
+        if input.pressed(MouseButton::Right) {
+            let mut rng = rand::thread_rng();
+            let random_number = rng.gen::<f64>();
+
+            let random_last_direction = if random_number < 0.5 {
+                LastDirection::Left
+            } else {
+                LastDirection::Right
+            };
+
+            commands
+                .spawn((
+                    Grain,
+                    Lifetime(0),
+                    water_sprite_bundle,
+                    GrainType::Water,
+                    random_last_direction,
                     GridPosition {
                         current_x: remaped_cursor_pos.x.round() as i32,
                         current_y: remaped_cursor_pos.y.round() as i32,
@@ -158,28 +209,9 @@ fn add_grain(
     }
 }
 
-fn grain_update_system(
-    grid_data: Res<Grid>,
-    mut query: Query<(&mut Transform, &mut GridPosition, &GrainType, &mut Lifetime)>,
-    mut tick_counter: ResMut<TickCounter>,
-) {
-    tick_counter.count += 1;
-    if tick_counter.count >= tick_counter.tick_rate {
-        tick_counter.count = 0;
-        for (mut transform, mut grid_position, grain_type, mut lifetime) in query.iter_mut() {
-            lifetime.0 += 1;
-            match grain_type {
-                GrainType::Sand => handle_sand_grain(&mut transform, &mut grid_position, &grid_data, lifetime.0),
-                GrainType::_Rock => { /* handle rock logic */ }
-                GrainType::_Water => { /* handle water logic */ }
-            }
-        }
-    }
-}
-
 fn handle_sand_grain(transform: &mut Transform, grid_position: &mut GridPosition, grid_data: &Grid, lifetime: u32) {
     // Ensure coordinates are in the grid
-    if grid_position.current_x >= 0
+    if grid_position.current_x >= 1
         && grid_position.current_x < GAME_RESOLUTION_X as i32 - 1
         && grid_position.current_y >= 0
         && grid_position.current_y < GAME_RESOLUTION_Y as i32 - 1
@@ -238,6 +270,110 @@ fn handle_sand_grain(transform: &mut Transform, grid_position: &mut GridPosition
                 grid_position.prev_x = Some(grid_position.current_x);
                 grid_position.prev_y = Some(grid_position.current_y);
                 grid_position.current_y += 1;
+            }
+        }
+    }
+}
+
+fn handle_water_grain(
+    transform: &mut Transform,
+    grid_position: &mut GridPosition,
+    grid_data: &Grid,
+    last_direction: &mut LastDirection
+) {
+    // Ensure coordinates are in the grid
+    if grid_position.current_x >= 1
+        && grid_position.current_x < GAME_RESOLUTION_X as i32 - 1
+        && grid_position.current_y >= 0
+        && grid_position.current_y < GAME_RESOLUTION_Y as i32 - 1
+    {
+        let maybe_grain_below = grid_data.get(grid_position.current_x as usize, (grid_position.current_y + 1) as usize);
+        let maybe_grain_right = grid_data.get((grid_position.current_x + 1) as usize, grid_position.current_y as usize);
+        let maybe_grain_left = grid_data.get((grid_position.current_x - 1) as usize, grid_position.current_y as usize);
+
+        match maybe_grain_below {
+            Some(_) => {
+                // There is a grain below, try moving
+                match (maybe_grain_left, maybe_grain_right) {
+                    (Some(left_grain), None) => match left_grain {
+                        GrainType::Water => match last_direction {
+                            LastDirection::Left => { /* Do nothing, stay in place */ }
+                            LastDirection::Right => {
+                                transform.translation.x += 1.0;
+                                grid_position.prev_x = Some(grid_position.current_x);
+                                grid_position.prev_y = Some(grid_position.current_y);
+                                grid_position.current_x += 1;
+                                *last_direction = LastDirection::Right;
+                            }
+                        },
+                        _ => {}
+                    },
+                    (None, Some(right_grain)) => match right_grain {
+                        GrainType::Water => match last_direction {
+                            LastDirection::Left => {
+                                transform.translation.x -= 1.0;
+                                grid_position.prev_x = Some(grid_position.current_x);
+                                grid_position.prev_y = Some(grid_position.current_y);
+                                grid_position.current_x -= 1;
+                                *last_direction = LastDirection::Left;
+                            }
+                            LastDirection::Right => { /* Do nothing, stay in place */ }
+                        },
+                        _ => {}
+                    },
+                    (None, None) => {
+                        if *last_direction == LastDirection::Right {
+                            transform.translation.x += 1.0;
+                            grid_position.prev_x = Some(grid_position.current_x);
+                            grid_position.prev_y = Some(grid_position.current_y);
+                            grid_position.current_x += 1;
+                        }
+                        if *last_direction == LastDirection::Left {
+                            transform.translation.x -= 1.0;
+                            grid_position.prev_x = Some(grid_position.current_x);
+                            grid_position.prev_y = Some(grid_position.current_y);
+                            grid_position.current_x -= 1;
+                        }
+                    }
+                    (Some(_), Some(_)) => { /* Do nothing, stay in place */ }
+                }
+            }
+            None => {
+                // No grain below, just fall
+                transform.translation.y -= 1.0;
+                grid_position.prev_x = Some(grid_position.current_x);
+                grid_position.prev_y = Some(grid_position.current_y);
+                grid_position.current_y += 1;
+            }
+        }
+    }
+}
+
+// TODO - Maybe do a system per grain type? To avoid Option<LastDirection)> that concern only water grain
+fn update_grain_system(
+    grid_data: Res<Grid>,
+    mut query: Query<(
+        &mut Transform,
+        &mut GridPosition,
+        &GrainType,
+        &mut Lifetime,
+        Option<&mut LastDirection>,
+    )>,
+    mut tick_counter: ResMut<TickCounter>,
+) {
+    tick_counter.count += 1;
+    if tick_counter.count >= tick_counter.tick_rate {
+        tick_counter.count = 0;
+        for (mut transform, mut grid_position, grain_type, mut lifetime, last_direction) in query.iter_mut() {
+            lifetime.0 += 1;
+            match grain_type {
+                GrainType::Sand => handle_sand_grain(&mut transform, &mut grid_position, &grid_data, lifetime.0),
+                GrainType::_Rock => { /* handle rock logic */ }
+                GrainType::Water => {
+                    if let Some(mut last_direction) = last_direction {
+                        handle_water_grain(&mut transform, &mut grid_position, &grid_data, &mut *last_direction)
+                    }
+                }
             }
         }
     }
