@@ -301,7 +301,7 @@ fn handle_water_grain(
                 // There is a grain below, try moving
                 match (maybe_grain_left, maybe_grain_right) {
                     (Some(_), None) => match direction {
-                        Direction::Left => {},
+                        Direction::Left => { /* Do nothing, stay in place */ },
                         Direction::Right => {
                             transform.translation.x += 1.0;
                             grid_position.prev_x = Some(grid_position.current_x);
@@ -316,7 +316,7 @@ fn handle_water_grain(
                             grid_position.prev_y = Some(grid_position.current_y);
                             grid_position.current_x -= 1;
                         },
-                        Direction::Right => {}
+                        Direction::Right => { /* Do nothing, stay in place */ }
                     },
                     (None, None) => {
                         if *direction == Direction::Right {
