@@ -103,7 +103,7 @@ struct GridPosition {
 }
 
 #[derive(Component, PartialEq)]
-enum LastDirection {
+enum Direction {
     Right,
     Left,
 }
@@ -182,10 +182,10 @@ fn add_grain(
             let mut rng = rand::thread_rng();
             let random_number = rng.gen::<f64>();
 
-            let random_last_direction = if random_number < 0.5 {
-                LastDirection::Left
+            let random_direction = if random_number < 0.5 {
+                Direction::Left
             } else {
-                LastDirection::Right
+                Direction::Right
             };
 
             commands
@@ -194,7 +194,7 @@ fn add_grain(
                     Lifetime(0),
                     water_sprite_bundle,
                     GrainType::Water,
-                    random_last_direction,
+                    random_direction,
                     GridPosition {
                         current_x: remaped_cursor_pos.x.round() as i32,
                         current_y: remaped_cursor_pos.y.round() as i32,
@@ -284,7 +284,7 @@ fn handle_water_grain(
     transform: &mut Transform,
     grid_position: &mut GridPosition,
     grid_data: &Grid,
-    last_direction: &mut LastDirection
+    direction: &mut Direction
 ) {
     // Ensure coordinates are in the grid
     if grid_position.current_x >= 1
@@ -300,40 +300,32 @@ fn handle_water_grain(
             Some(_) => {
                 // There is a grain below, try moving
                 match (maybe_grain_left, maybe_grain_right) {
-                    (Some(left_grain), None) => match left_grain {
-                        GrainType::Water => match last_direction {
-                            LastDirection::Left => { /* Do nothing, stay in place */ }
-                            LastDirection::Right => {
-                                transform.translation.x += 1.0;
-                                grid_position.prev_x = Some(grid_position.current_x);
-                                grid_position.prev_y = Some(grid_position.current_y);
-                                grid_position.current_x += 1;
-                                *last_direction = LastDirection::Right;
-                            }
-                        },
-                        _ => {}
-                    },
-                    (None, Some(right_grain)) => match right_grain {
-                        GrainType::Water => match last_direction {
-                            LastDirection::Left => {
-                                transform.translation.x -= 1.0;
-                                grid_position.prev_x = Some(grid_position.current_x);
-                                grid_position.prev_y = Some(grid_position.current_y);
-                                grid_position.current_x -= 1;
-                                *last_direction = LastDirection::Left;
-                            }
-                            LastDirection::Right => { /* Do nothing, stay in place */ }
-                        },
-                        _ => {}
-                    },
-                    (None, None) => {
-                        if *last_direction == LastDirection::Right {
+                    (Some(_), None) => match direction {
+                        Direction::Left => {},
+                        Direction::Right => {
                             transform.translation.x += 1.0;
                             grid_position.prev_x = Some(grid_position.current_x);
                             grid_position.prev_y = Some(grid_position.current_y);
                             grid_position.current_x += 1;
                         }
-                        if *last_direction == LastDirection::Left {
+                    },
+                    (None, Some(_)) => match direction {
+                        Direction::Left => {
+                            transform.translation.x -= 1.0;
+                            grid_position.prev_x = Some(grid_position.current_x);
+                            grid_position.prev_y = Some(grid_position.current_y);
+                            grid_position.current_x -= 1;
+                        },
+                        Direction::Right => {}
+                    },
+                    (None, None) => {
+                        if *direction == Direction::Right {
+                            transform.translation.x += 1.0;
+                            grid_position.prev_x = Some(grid_position.current_x);
+                            grid_position.prev_y = Some(grid_position.current_y);
+                            grid_position.current_x += 1;
+                        }
+                        if *direction == Direction::Left {
                             transform.translation.x -= 1.0;
                             grid_position.prev_x = Some(grid_position.current_x);
                             grid_position.prev_y = Some(grid_position.current_y);
@@ -362,21 +354,21 @@ fn update_grain_system(
         &mut GridPosition,
         &GrainType,
         &mut Lifetime,
-        Option<&mut LastDirection>,
+        Option<&mut Direction>,
     )>,
     mut tick_counter: ResMut<TickCounter>,
 ) {
     tick_counter.count += 1;
     if tick_counter.count >= tick_counter.tick_rate {
         tick_counter.count = 0;
-        for (mut transform, mut grid_position, grain_type, mut lifetime, last_direction) in query.iter_mut() {
+        for (mut transform, mut grid_position, grain_type, mut lifetime, direction) in query.iter_mut() {
             lifetime.0 += 1;
             match grain_type {
                 GrainType::Sand => handle_sand_grain(&mut transform, &mut grid_position, &grid_data, lifetime.0),
                 GrainType::_Rock => { /* handle rock logic */ }
                 GrainType::Water => {
-                    if let Some(mut last_direction) = last_direction {
-                        handle_water_grain(&mut transform, &mut grid_position, &grid_data, &mut *last_direction)
+                    if let Some(mut direction) = direction {
+                        handle_water_grain(&mut transform, &mut grid_position, &grid_data, &mut *direction)
                     }
                 }
             }
