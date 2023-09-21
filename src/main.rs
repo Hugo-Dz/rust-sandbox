@@ -70,6 +70,7 @@ fn main() {
         .add_systems(Update, add_grain)
         .add_systems(Update, update_grain_system)
         .add_systems(Update, update_grid_data)
+        .add_systems(Update, shade_water)
         .run();
 }
 
@@ -107,6 +108,9 @@ enum Direction {
     Right,
     Left,
 }
+
+#[derive(Component, PartialEq)]
+struct DirectionChanges(u32);
 
 fn add_grain(
     mut commands: Commands,
@@ -192,6 +196,7 @@ fn add_grain(
                 .spawn((
                     Grain,
                     Lifetime(0),
+                    DirectionChanges(0),
                     water_sprite_bundle,
                     GrainType::Water,
                     random_direction,
@@ -230,7 +235,8 @@ fn handle_sand_grain(transform: &mut Transform, grid_position: &mut GridPosition
 
         match maybe_grain_below {
             Some(_) => {
-                if lifetime > 500 {
+                // Do nothing if the after a long time or before a short time (to avoid grain behavior in the air after spawning)
+                if lifetime > 500 || lifetime < 50 {
                     return;
                 }
                 // There is a grain below, try moving
@@ -284,7 +290,9 @@ fn handle_water_grain(
     transform: &mut Transform,
     grid_position: &mut GridPosition,
     grid_data: &Grid,
-    direction: &mut Direction
+    direction: &mut Direction,
+    lifetime: u32,
+    direction_changes: &mut u32
 ) {
     // Ensure coordinates are in the grid
     if grid_position.current_x >= 1
@@ -298,10 +306,23 @@ fn handle_water_grain(
 
         match maybe_grain_below {
             Some(_) => {
+
+                // Do nothing if the after a long time or before a short time (to avoid grain behavior in the air after spawning)
+                if lifetime < 50 {
+                    return;
+                }
+
+                if *direction_changes > 10 {
+                    return;
+                }
+
                 // There is a grain below, try moving
                 match (maybe_grain_left, maybe_grain_right) {
                     (Some(_), None) => match direction {
-                        Direction::Left => { /* Do nothing, stay in place */ },
+                        Direction::Left => { 
+                            *direction = Direction::Right;
+                            *direction_changes += 1;
+                        }
                         Direction::Right => {
                             transform.translation.x += 1.0;
                             grid_position.prev_x = Some(grid_position.current_x);
@@ -315,8 +336,11 @@ fn handle_water_grain(
                             grid_position.prev_x = Some(grid_position.current_x);
                             grid_position.prev_y = Some(grid_position.current_y);
                             grid_position.current_x -= 1;
-                        },
-                        Direction::Right => { /* Do nothing, stay in place */ }
+                        }
+                        Direction::Right => {
+                            *direction = Direction::Left;
+                            *direction_changes += 1;
+                        }
                     },
                     (None, None) => {
                         if *direction == Direction::Right {
@@ -355,23 +379,50 @@ fn update_grain_system(
         &GrainType,
         &mut Lifetime,
         Option<&mut Direction>,
+        Option<&mut DirectionChanges>,
     )>,
     mut tick_counter: ResMut<TickCounter>,
 ) {
     tick_counter.count += 1;
     if tick_counter.count >= tick_counter.tick_rate {
         tick_counter.count = 0;
-        for (mut transform, mut grid_position, grain_type, mut lifetime, direction) in query.iter_mut() {
+        for (mut transform, mut grid_position, grain_type, mut lifetime, direction, direction_changes) in query.iter_mut() {
             lifetime.0 += 1;
             match grain_type {
                 GrainType::Sand => handle_sand_grain(&mut transform, &mut grid_position, &grid_data, lifetime.0),
                 GrainType::_Rock => { /* handle rock logic */ }
                 GrainType::Water => {
-                    if let Some(mut direction) = direction {
-                        handle_water_grain(&mut transform, &mut grid_position, &grid_data, &mut *direction)
+                    match (direction, direction_changes) {
+                        (Some(mut direction), Some(mut direction_changes)) => {
+                            handle_water_grain(&mut transform, &mut grid_position, &grid_data, &mut direction, lifetime.0, &mut direction_changes.0);
+                        },
+                        _ => {}
                     }
                 }
             }
+        }
+    }
+}
+
+fn shade_water(
+    mut query: Query<(&GrainType, &mut GridPosition, &mut Handle<Image>)>,
+    grid_data: ResMut<Grid>,
+    asset_server: Res<AssetServer>,
+) {
+    for (grain_type, grid_position, mut texture_handle) in query.iter_mut() {
+
+        let maybe_grain_above = grid_data.get(grid_position.current_x as usize, (grid_position.current_y - 1) as usize);
+
+        match grain_type {
+            GrainType::Water => match maybe_grain_above {
+                None => {
+                    *texture_handle = asset_server.load("waterSurface1.png");
+                }
+                _ => {
+                    *texture_handle = asset_server.load("water1.png");
+                }
+            },
+            _ => {}
         }
     }
 }
