@@ -308,7 +308,7 @@ fn handle_water_grain(
             Some(_) => {
 
                 // Do nothing if the after a long time or before a short time (to avoid grain behavior in the air after spawning)
-                if lifetime < 50 {
+                if lifetime < 5 {
                     return;
                 }
 
