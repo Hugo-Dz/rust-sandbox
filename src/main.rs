@@ -11,6 +11,7 @@ use rand::Rng;
 const GAME_RESOLUTION_X: usize = 80;
 const GAME_RESOLUTION_Y: usize = 60;
 const WINDOW_SIZE: [f32; 2] = [640.0, 480.0];
+const TICK_RATE: u32 = 5;
 
 #[derive(Resource)]
 struct TickCounter {
@@ -64,7 +65,7 @@ fn main() {
             PixelCameraPlugin,
         ))
         .insert_resource(ClearColor(Color::rgb(0.0, 0.0, 0.0)))
-        .insert_resource(TickCounter { count: 0, tick_rate: 1 })
+        .insert_resource(TickCounter { count: 0, tick_rate: TICK_RATE })
         .insert_resource(Grid::new())
         .add_systems(Startup, setup)
         .add_systems(Update, add_grain)
