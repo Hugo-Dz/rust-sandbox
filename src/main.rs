@@ -11,7 +11,7 @@ use rand::Rng;
 const GAME_RESOLUTION_X: usize = 80;
 const GAME_RESOLUTION_Y: usize = 60;
 const WINDOW_SIZE: [f32; 2] = [640.0, 480.0];
-const TICK_RATE: u32 = 5;
+const TICK_RATE: u32 = 1;
 
 #[derive(Resource)]
 struct TickCounter {
@@ -111,6 +111,9 @@ enum Direction {
 }
 
 #[derive(Component, PartialEq)]
+struct CompleteBackForth(bool);
+
+#[derive(Component, PartialEq)]
 struct DirectionChanges(u32);
 
 fn add_grain(
@@ -207,6 +210,7 @@ fn add_grain(
                         prev_x: None,
                         prev_y: None,
                     },
+                    CompleteBackForth(false)
                 ))
                 .insert(Transform {
                     translation: Vec3::new(
@@ -293,7 +297,7 @@ fn handle_water_grain(
     grid_data: &Grid,
     direction: &mut Direction,
     lifetime: u32,
-    direction_changes: &mut u32
+    complete_back_forth_cycle: &mut CompleteBackForth
 ) {
     // Ensure coordinates are in the grid
     if grid_position.current_x >= 1
@@ -313,16 +317,14 @@ fn handle_water_grain(
                     return;
                 }
 
-                if *direction_changes > 10 {
-                    return;
-                }
-
                 // There is a grain below, try moving
                 match (maybe_grain_left, maybe_grain_right) {
                     (Some(_), None) => match direction {
-                        Direction::Left => { 
-                            *direction = Direction::Right;
-                            *direction_changes += 1;
+                        Direction::Left => {
+                            if !complete_back_forth_cycle.0 {
+                                *direction = Direction::Right;
+                                complete_back_forth_cycle.0 = true;
+                            }
                         }
                         Direction::Right => {
                             transform.translation.x += 1.0;
@@ -339,8 +341,10 @@ fn handle_water_grain(
                             grid_position.current_x -= 1;
                         }
                         Direction::Right => {
-                            *direction = Direction::Left;
-                            *direction_changes += 1;
+                            if !complete_back_forth_cycle.0 {
+                                *direction = Direction::Left;
+                                complete_back_forth_cycle.0 = true;
+                            }
                         }
                     },
                     (None, None) => {
@@ -371,7 +375,6 @@ fn handle_water_grain(
     }
 }
 
-// TODO - Maybe do a system per grain type? To avoid Option<LastDirection)> that concern only water grain
 fn update_grain_system(
     grid_data: Res<Grid>,
     mut query: Query<(
@@ -379,25 +382,22 @@ fn update_grain_system(
         &mut GridPosition,
         &GrainType,
         &mut Lifetime,
+        Option<&mut CompleteBackForth>,
         Option<&mut Direction>,
-        Option<&mut DirectionChanges>,
     )>,
     mut tick_counter: ResMut<TickCounter>,
 ) {
     tick_counter.count += 1;
     if tick_counter.count >= tick_counter.tick_rate {
         tick_counter.count = 0;
-        for (mut transform, mut grid_position, grain_type, mut lifetime, direction, direction_changes) in query.iter_mut() {
+        for (mut transform, mut grid_position, grain_type, mut lifetime, cycle,  direction) in query.iter_mut() {
             lifetime.0 += 1;
             match grain_type {
                 GrainType::Sand => handle_sand_grain(&mut transform, &mut grid_position, &grid_data, lifetime.0),
                 GrainType::_Rock => { /* handle rock logic */ }
                 GrainType::Water => {
-                    match (direction, direction_changes) {
-                        (Some(mut direction), Some(mut direction_changes)) => {
-                            handle_water_grain(&mut transform, &mut grid_position, &grid_data, &mut direction, lifetime.0, &mut direction_changes.0);
-                        },
-                        _ => {}
+                    if let (Some(mut dir), Some(mut cycle)) = (direction, cycle) {
+                        handle_water_grain(&mut transform, &mut grid_position, &grid_data, &mut dir, lifetime.0, &mut cycle);
                     }
                 }
             }
