@@ -113,8 +113,7 @@ enum Direction {
 #[derive(Component, PartialEq)]
 struct CompleteBackForth(bool);
 
-#[derive(Component, PartialEq)]
-struct DirectionChanges(u32);
+
 
 fn add_grain(
     mut commands: Commands,
@@ -200,7 +199,6 @@ fn add_grain(
                 .spawn((
                     Grain,
                     Lifetime(0),
-                    DirectionChanges(0),
                     blood_sprite_bundle,
                     GrainType::Blood,
                     random_direction,
