@@ -71,7 +71,7 @@ fn main() {
         .add_systems(Update, add_grain)
         .add_systems(Update, update_grain_system)
         .add_systems(Update, update_grid_data)
-        .add_systems(Update, shade_water)
+        .add_systems(Update, shade_blood)
         .run();
 }
 
@@ -93,7 +93,7 @@ struct Lifetime(u32);
 enum GrainType {
     Sand,
     _Rock,
-    Water,
+    Blood,
 }
 
 #[derive(Component)]
@@ -141,20 +141,20 @@ fn add_grain(
         ..default()
     };
 
-    let water_textures: [Handle<Image>; 3] = [
+    let blood_textures: [Handle<Image>; 3] = [
         asset_server.load("water1.png"),
         asset_server.load("water2.png"),
         asset_server.load("water3.png"),
     ];
-    let water_texture = water_textures[random_index].clone();
+    let blood_texture = blood_textures[random_index].clone();
 
-    let water_sprite_bundle = SpriteBundle {
+    let blood_sprite_bundle = SpriteBundle {
         sprite: Sprite {
             custom_size: Some(Vec2::new(1.0, 1.0)),
             anchor: Anchor::TopLeft,
             ..default()
         },
-        texture: water_texture,
+        texture: blood_texture,
         ..default()
     };
 
@@ -201,8 +201,8 @@ fn add_grain(
                     Grain,
                     Lifetime(0),
                     DirectionChanges(0),
-                    water_sprite_bundle,
-                    GrainType::Water,
+                    blood_sprite_bundle,
+                    GrainType::Blood,
                     random_direction,
                     GridPosition {
                         current_x: remaped_cursor_pos.x.round() as i32,
@@ -291,7 +291,7 @@ fn handle_sand_grain(transform: &mut Transform, grid_position: &mut GridPosition
     }
 }
 
-fn handle_water_grain(
+fn handle_blood_grain(
     transform: &mut Transform,
     grid_position: &mut GridPosition,
     grid_data: &Grid,
@@ -395,9 +395,9 @@ fn update_grain_system(
             match grain_type {
                 GrainType::Sand => handle_sand_grain(&mut transform, &mut grid_position, &grid_data, lifetime.0),
                 GrainType::_Rock => { /* handle rock logic */ }
-                GrainType::Water => {
+                GrainType::Blood => {
                     if let (Some(mut dir), Some(mut cycle)) = (direction, cycle) {
-                        handle_water_grain(&mut transform, &mut grid_position, &grid_data, &mut dir, lifetime.0, &mut cycle);
+                        handle_blood_grain(&mut transform, &mut grid_position, &grid_data, &mut dir, lifetime.0, &mut cycle);
                     }
                 }
             }
@@ -405,7 +405,7 @@ fn update_grain_system(
     }
 }
 
-fn shade_water(
+fn shade_blood(
     mut query: Query<(&GrainType, &mut GridPosition, &mut Handle<Image>)>,
     grid_data: ResMut<Grid>,
     asset_server: Res<AssetServer>,
@@ -415,7 +415,7 @@ fn shade_water(
         let maybe_grain_above = grid_data.get(grid_position.current_x as usize, (grid_position.current_y - 1) as usize);
 
         match grain_type {
-            GrainType::Water => match maybe_grain_above {
+            GrainType::Blood => match maybe_grain_above {
                 None => {
                     *texture_handle = asset_server.load("waterSurface1.png");
                 }
