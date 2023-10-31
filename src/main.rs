@@ -53,7 +53,7 @@ fn main() {
                 .set(ImagePlugin::default_nearest())
                 .set(WindowPlugin {
                     primary_window: Some(Window {
-                        title: "Sandy".into(),
+                        title: "Hell".into(),
                         resolution: (WINDOW_SIZE[0], WINDOW_SIZE[1]).into(),
                         resizable: false,
                         present_mode: PresentMode::AutoVsync,
@@ -91,7 +91,7 @@ struct Lifetime(u32);
 
 #[derive(Component, Clone, Copy, Debug)]
 enum GrainType {
-    Sand,
+    Bone,
     _Rock,
     Blood,
 }
@@ -122,22 +122,22 @@ fn add_grain(
     asset_server: Res<AssetServer>,
     query: Query<&Window>,
 ) {
-    let sand_textures: [Handle<Image>; 3] = [
+    let bone_textures: [Handle<Image>; 3] = [
         asset_server.load("sand1.png"),
         asset_server.load("sand2.png"),
         asset_server.load("sand3.png"),
     ];
     let mut rng = rand::thread_rng();
-    let random_index = rng.gen_range(0..sand_textures.len());
-    let sand_texture = sand_textures[random_index].clone();
+    let random_index = rng.gen_range(0..bone_textures.len());
+    let bone_texture = bone_textures[random_index].clone();
 
-    let sand_sprite_bundle = SpriteBundle {
+    let bone_sprite_bundle = SpriteBundle {
         sprite: Sprite {
             custom_size: Some(Vec2::new(1.0, 1.0)),
             anchor: Anchor::TopLeft,
             ..default()
         },
-        texture: sand_texture,
+        texture: bone_texture,
         ..default()
     };
 
@@ -167,8 +167,8 @@ fn add_grain(
                 .spawn((
                     Grain,
                     Lifetime(0),
-                    sand_sprite_bundle,
-                    GrainType::Sand,
+                    bone_sprite_bundle,
+                    GrainType::Bone,
                     GridPosition {
                         current_x: remaped_cursor_pos.x.round() as i32,
                         current_y: remaped_cursor_pos.y.round() as i32,
@@ -224,7 +224,7 @@ fn add_grain(
     }
 }
 
-fn handle_sand_grain(transform: &mut Transform, grid_position: &mut GridPosition, grid_data: &Grid, lifetime: u32) {
+fn handle_bone_grain(transform: &mut Transform, grid_position: &mut GridPosition, grid_data: &Grid, lifetime: u32) {
     // Ensure coordinates are in the grid
     if grid_position.current_x >= 1
         && grid_position.current_x < GAME_RESOLUTION_X as i32 - 1
@@ -393,7 +393,7 @@ fn update_grain_system(
         for (mut transform, mut grid_position, grain_type, mut lifetime, cycle,  direction) in query.iter_mut() {
             lifetime.0 += 1;
             match grain_type {
-                GrainType::Sand => handle_sand_grain(&mut transform, &mut grid_position, &grid_data, lifetime.0),
+                GrainType::Bone => handle_bone_grain(&mut transform, &mut grid_position, &grid_data, lifetime.0),
                 GrainType::_Rock => { /* handle rock logic */ }
                 GrainType::Blood => {
                     if let (Some(mut dir), Some(mut cycle)) = (direction, cycle) {
