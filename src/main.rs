@@ -121,46 +121,32 @@ fn add_grain(
     asset_server: Res<AssetServer>,
     query: Query<&Window>,
 ) {
-    let bone_textures: [Handle<Image>; 3] = [
-        asset_server.load("sand1.png"),
-        asset_server.load("sand2.png"),
-        asset_server.load("sand3.png"),
-    ];
-    let mut rng = rand::thread_rng();
-    let random_index = rng.gen_range(0..bone_textures.len());
-    let bone_texture = bone_textures[random_index].clone();
-
-    let bone_sprite_bundle = SpriteBundle {
-        sprite: Sprite {
-            custom_size: Some(Vec2::new(1.0, 1.0)),
-            anchor: Anchor::TopLeft,
-            ..default()
-        },
-        texture: bone_texture,
-        ..default()
-    };
-
-    let blood_textures: [Handle<Image>; 3] = [
-        asset_server.load("water1.png"),
-        asset_server.load("water2.png"),
-        asset_server.load("water3.png"),
-    ];
-    let blood_texture = blood_textures[random_index].clone();
-
-    let blood_sprite_bundle = SpriteBundle {
-        sprite: Sprite {
-            custom_size: Some(Vec2::new(1.0, 1.0)),
-            anchor: Anchor::TopLeft,
-            ..default()
-        },
-        texture: blood_texture,
-        ..default()
-    };
 
     if let Some(position) = query.single().cursor_position() {
         let remaped_cursor_pos = remap_cursor_position(position, WINDOW_SIZE, [GAME_RESOLUTION_X, GAME_RESOLUTION_Y]);
 
         if input.pressed(MouseButton::Left) {
+
+            // Create a bone sprite texture
+            let bone_textures: [Handle<Image>; 3] = [
+                asset_server.load("bone_1.png"),
+                asset_server.load("bone_2.png"),
+                asset_server.load("bone_3.png"),
+            ];
+            let mut rng = rand::thread_rng();
+            let random_index = rng.gen_range(0..bone_textures.len());
+            let bone_texture = bone_textures[random_index].clone();
+        
+            let bone_sprite_bundle = SpriteBundle {
+                sprite: Sprite {
+                    custom_size: Some(Vec2::new(1.0, 1.0)),
+                    anchor: Anchor::TopLeft,
+                    ..default()
+                },
+                texture: bone_texture,
+                ..default()
+            };
+
             // Add a row (entity) with this set of components
             commands
                 .spawn((
@@ -186,6 +172,21 @@ fn add_grain(
         }
 
         if input.pressed(MouseButton::Right) {
+
+            // Creat a blood sprite texture
+            let blood_texture = asset_server.load("blood_2.png");
+
+            let blood_sprite_bundle = SpriteBundle {
+                sprite: Sprite {
+                    custom_size: Some(Vec2::new(1.0, 1.0)),
+                    anchor: Anchor::TopLeft,
+                    ..default()
+                },
+                texture: blood_texture,
+                ..default()
+            };
+
+            // Pick a random direction to slide to
             let mut rng = rand::thread_rng();
             let random_number = rng.gen::<f64>();
 
@@ -229,63 +230,17 @@ fn handle_bone_grain(transform: &mut Transform, grid_position: &mut GridPosition
         && grid_position.current_y >= 0
         && grid_position.current_y < GAME_RESOLUTION_Y as i32 - 1
     {
-        let maybe_grain_below = grid_data.get(grid_position.current_x as usize, (grid_position.current_y + 1) as usize);
-        let maybe_grain_right = grid_data.get((grid_position.current_x + 1) as usize, grid_position.current_y as usize);
-        let maybe_grain_left = grid_data.get((grid_position.current_x - 1) as usize, grid_position.current_y as usize);
+        let maybe_grain_above = grid_data.get(grid_position.current_x as usize, (grid_position.current_y - 1) as usize);
 
-        let mut rng = rand::thread_rng();
-        let random_number = rng.gen::<f64>();
-
-        match maybe_grain_below {
-            Some(_) => {
-                // Do nothing if the after a long time or before a short time (to avoid grain behavior in the air after spawning)
-                if lifetime > 500 || lifetime < 50 {
-                    return;
-                }
-                // There is a grain below, try moving
-                match (maybe_grain_left, maybe_grain_right) {
-                    (Some(_), None) => {
-                        if random_number < 0.01 {
-                            transform.translation.x += 1.0;
-                            grid_position.prev_x = Some(grid_position.current_x);
-                            grid_position.prev_y = Some(grid_position.current_y);
-                            grid_position.current_x += 1;
-                        }
-                    }
-                    (None, Some(_)) => {
-                        if random_number < 0.01 {
-                            transform.translation.x -= 1.0;
-                            grid_position.prev_x = Some(grid_position.current_x);
-                            grid_position.prev_y = Some(grid_position.current_y);
-                            grid_position.current_x -= 1;
-                        }
-                    }
-                    (None, None) => {
-                        if random_number < 0.80 {
-                            if random_number < 0.40 {
-                                transform.translation.x += 1.0;
-                                grid_position.prev_x = Some(grid_position.current_x);
-                                grid_position.prev_y = Some(grid_position.current_y);
-                                grid_position.current_x += 1;
-                            } else {
-                                transform.translation.x -= 1.0;
-                                grid_position.prev_x = Some(grid_position.current_x);
-                                grid_position.prev_y = Some(grid_position.current_y);
-                                grid_position.current_x -= 1;
-                            }
-                        }
-                    }
-                    (Some(_), Some(_)) => {}
-                }
-            }
-            None => {
-                // No grain below, just fall
-                transform.translation.y -= 1.0;
-                grid_position.prev_x = Some(grid_position.current_x);
-                grid_position.prev_y = Some(grid_position.current_y);
-                grid_position.current_y += 1;
+        if let Some(grain_above) = maybe_grain_above {
+            match grain_above {
+                GrainType::Blood => {
+                    // Tint the bone to red-ish color
+                },
+                _ => {}
             }
         }
+
     }
 }
 
@@ -415,10 +370,10 @@ fn shade_blood(
         match grain_type {
             GrainType::Blood => match maybe_grain_above {
                 None => {
-                    *texture_handle = asset_server.load("waterSurface1.png");
+                    *texture_handle = asset_server.load("blood_1.png");
                 }
                 _ => {
-                    *texture_handle = asset_server.load("water1.png");
+                    *texture_handle = asset_server.load("blood_2.png");
                 }
             },
             _ => {}
