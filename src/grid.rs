@@ -37,8 +37,6 @@ pub struct GridPosition {
     pub prev_y: Option<i32>,
 }
 
-
-
 pub fn update_grid_data(mut query: Query<(&GrainType, &mut GridPosition)>, mut grid_data: ResMut<Grid>) {
     for (grain_type, mut grid_position) in query.iter_mut() {
         // Clear the previous position from the grid

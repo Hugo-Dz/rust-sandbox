@@ -26,34 +26,6 @@ pub enum Direction {
     Left,
 }
 
-pub fn update_grain(
-    grid_data: Res<Grid>,
-    mut query: Query<(
-        &mut Transform,
-        &mut GridPosition,
-        &GrainType,
-        &mut Lifetime,
-        Option<&mut Direction>,
-    )>,
-    mut tick_counter: ResMut<TickCounter>,
-) {
-    tick_counter.count += 1;
-    if tick_counter.count >= tick_counter.tick_rate {
-        tick_counter.count = 0;
-        for (mut transform, mut grid_position, grain_type, mut lifetime, direction) in query.iter_mut() {
-            lifetime.0 += 1;
-            match grain_type {
-                GrainType::Bone => handle_bone_grain(&grid_position, &grid_data),
-                GrainType::Blood => {
-                    if let Some(mut dir) = direction {
-                        handle_blood_grain(&mut transform, &mut grid_position, &grid_data, &mut dir, lifetime.0);
-                    }
-                }
-            }
-        }
-    }
-}
-
 pub fn add_grain(
     mut commands: Commands,
     query: Query<&Window>,
@@ -154,6 +126,34 @@ pub fn add_grain(
                     ),
                     ..default()
                 });
+        }
+    }
+}
+
+pub fn update_grain(
+    grid_data: Res<Grid>,
+    mut query: Query<(
+        &mut Transform,
+        &mut GridPosition,
+        &GrainType,
+        &mut Lifetime,
+        Option<&mut Direction>,
+    )>,
+    mut tick_counter: ResMut<TickCounter>,
+) {
+    tick_counter.count += 1;
+    if tick_counter.count >= tick_counter.tick_rate {
+        tick_counter.count = 0;
+        for (mut transform, mut grid_position, grain_type, mut lifetime, direction) in query.iter_mut() {
+            lifetime.0 += 1;
+            match grain_type {
+                GrainType::Bone => handle_bone_grain(&grid_position, &grid_data),
+                GrainType::Blood => {
+                    if let Some(mut dir) = direction {
+                        handle_blood_grain(&mut transform, &mut grid_position, &grid_data, &mut dir, lifetime.0);
+                    }
+                }
+            }
         }
     }
 }
