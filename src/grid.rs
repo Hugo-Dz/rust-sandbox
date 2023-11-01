@@ -1,6 +1,12 @@
-use bevy::prelude::*;
-use crate::utils::constants::{GAME_RESOLUTION_X, GAME_RESOLUTION_Y};
 use crate::grain::GrainType;
+use crate::utils::constants::{GAME_RESOLUTION_X, GAME_RESOLUTION_Y};
+use bevy::prelude::*;
+
+/*
+
+    🦀 Resources and Components. Learn more: https://bevy-cheatbook.github.io/programming/res.html
+
+*/
 
 #[derive(Resource)]
 pub struct Grid {
@@ -37,6 +43,12 @@ pub struct GridPosition {
     pub prev_y: Option<i32>,
 }
 
+/*
+
+    🦀 Systems. Learn more: https://bevy-cheatbook.github.io/programming/systems.html
+
+*/
+
 pub fn update_grid_data(mut query: Query<(&GrainType, &mut GridPosition)>, mut grid_data: ResMut<Grid>) {
     for (grain_type, mut grid_position) in query.iter_mut() {
         // Clear the previous position from the grid
@@ -53,7 +65,11 @@ pub fn update_grid_data(mut query: Query<(&GrainType, &mut GridPosition)>, mut g
             && grid_position.current_y < GAME_RESOLUTION_Y as i32
         {
             // Update the grid with the new position
-            grid_data.set(grid_position.current_x as usize, grid_position.current_y as usize, *grain_type);
+            grid_data.set(
+                grid_position.current_x as usize,
+                grid_position.current_y as usize,
+                *grain_type,
+            );
         }
 
         // Update prev for next frame

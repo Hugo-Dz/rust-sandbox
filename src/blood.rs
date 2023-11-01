@@ -70,6 +70,12 @@ pub fn handle_blood_grain(
     }
 }
 
+/*
+
+    🦀 Systems. Learn more: https://bevy-cheatbook.github.io/programming/systems.html
+
+*/
+
 pub fn shade_blood(
     mut query: Query<(&GrainType, &mut GridPosition, &mut Handle<Image>)>,
     grid_data: ResMut<Grid>,

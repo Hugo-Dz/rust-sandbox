@@ -1,12 +1,18 @@
+use crate::blood::handle_blood_grain;
+use crate::bone::handle_bone_grain;
+use crate::grid::{Grid, GridPosition};
+use crate::utils::constants::{GAME_RESOLUTION_X, GAME_RESOLUTION_Y, WINDOW_SIZE};
+use crate::utils::remap::remap_cursor_position;
+use crate::utils::tick::TickCounter;
 use bevy::prelude::*;
 use bevy::sprite::Anchor;
 use rand::Rng;
-use crate::grid::{Grid, GridPosition};
-use crate::utils::remap::remap_cursor_position;
-use crate::blood::handle_blood_grain;
-use crate::bone::handle_bone_grain;
-use crate::utils::constants::{GAME_RESOLUTION_X, GAME_RESOLUTION_Y, WINDOW_SIZE};
-use crate::utils::tick::TickCounter;
+
+/*
+
+    🦀 Components. Learn more: https://bevy-cheatbook.github.io/programming/res.html
+
+*/
 
 #[derive(Component)]
 pub struct Grain;
@@ -26,28 +32,27 @@ pub enum Direction {
     Left,
 }
 
+/*
+
+    🦀 Systems. Learn more: https://bevy-cheatbook.github.io/programming/systems.html
+
+*/
+
 pub fn add_grain(
     mut commands: Commands,
     query: Query<&Window>,
     asset_server: Res<AssetServer>,
-    input: Res<Input<MouseButton>>
+    input: Res<Input<MouseButton>>,
 ) {
-
     if let Some(position) = query.single().cursor_position() {
-
         let remaped_cursor_pos = remap_cursor_position(position, WINDOW_SIZE, [GAME_RESOLUTION_X, GAME_RESOLUTION_Y]);
         let mut rng = rand::thread_rng();
 
         if input.pressed(MouseButton::Left) {
-
             // Create a bone sprite texture
-            let bone_textures: [&str; 3] = [
-                "bone_1.png",
-                "bone_2.png",
-                "bone_3.png"
-            ];
+            let bone_textures: [&str; 3] = ["bone_1.png", "bone_2.png", "bone_3.png"];
             let random_index = rng.gen_range(0..bone_textures.len());
-        
+
             let bone_sprite_bundle = SpriteBundle {
                 sprite: Sprite {
                     custom_size: Some(Vec2::new(1.0, 1.0)),
@@ -82,7 +87,6 @@ pub fn add_grain(
         }
 
         if input.pressed(MouseButton::Right) {
-
             // Creat a blood sprite texture
             let blood_sprite_bundle = SpriteBundle {
                 sprite: Sprite {
@@ -116,7 +120,7 @@ pub fn add_grain(
                         current_y: remaped_cursor_pos.y.round() as i32,
                         prev_x: None,
                         prev_y: None,
-                    }
+                    },
                 ))
                 .insert(Transform {
                     translation: Vec3::new(
