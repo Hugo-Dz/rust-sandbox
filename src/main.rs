@@ -150,7 +150,6 @@ fn add_grain(
             commands
                 .spawn((
                     Grain,
-                    Lifetime(0),
                     bone_sprite_bundle,
                     GrainType::Bone,
                     GridPosition {
@@ -219,25 +218,26 @@ fn add_grain(
     }
 }
 
-fn handle_bone_grain(_transform: &mut Transform, grid_position: &mut GridPosition, grid_data: &Grid, _lifetime: u32) {
+fn handle_bone_grain(grid_position: &GridPosition, grid_data: &Grid) {
     // Ensure coordinates are in the grid
-    if grid_position.current_x >= 1
-        && grid_position.current_x < GAME_RESOLUTION_X as i32 - 1
-        && grid_position.current_y >= 0
-        && grid_position.current_y < GAME_RESOLUTION_Y as i32 - 1
-    {
+    if is_within_boundaries(grid_position, GAME_RESOLUTION_X as i32, GAME_RESOLUTION_Y as i32) {
         let maybe_grain_above = grid_data.get(grid_position.current_x as usize, (grid_position.current_y - 1) as usize);
 
         if let Some(grain_above) = maybe_grain_above {
             match grain_above {
                 GrainType::Blood => {
+                    // Not used but some ideas:
                     // Tint the bone to red-ish color
+                    // Break the bone after X lifetime (think to add the lifetime component to the bone entity)
                 },
                 _ => {}
             }
         }
-
     }
+}
+
+fn is_within_boundaries(grid_position: &GridPosition, res_x: i32, res_y: i32) -> bool {
+    grid_position.current_x >= 1 && grid_position.current_x < res_x - 1 && grid_position.current_y >= 0 && grid_position.current_y < res_y - 1
 }
 
 fn handle_blood_grain(
@@ -338,7 +338,7 @@ fn update_grain_system(
         for (mut transform, mut grid_position, grain_type, mut lifetime, direction) in query.iter_mut() {
             lifetime.0 += 1;
             match grain_type {
-                GrainType::Bone => handle_bone_grain(&mut transform, &mut grid_position, &grid_data, lifetime.0),
+                GrainType::Bone => handle_bone_grain(&grid_position, &grid_data),
                 GrainType::_Rock => { /* handle rock logic */ }
                 GrainType::Blood => {
                     if let Some(mut dir) = direction {
