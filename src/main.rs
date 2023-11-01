@@ -43,7 +43,7 @@ fn main() {
                 .build(),
             PixelCameraPlugin,
         ))
-        .insert_resource(ClearColor(Color::rgb(0.0, 0.0, 0.0)))
+        .insert_resource(ClearColor(Color::hex("221e22").unwrap()))
         .insert_resource(TickCounter {
             count: 0,
             tick_rate: TICK_RATE,
