@@ -6,19 +6,20 @@ A little sandbox simulation done without physics, just for fun and to learn a bi
 
 ## Run it locally
 
-Clone the project
+- Clone the project
 
 ```bash
   git clone https://github.com/Hugo-Dz/rust-sandbox.git
+  cd rust-sandbox
 ```
 
-Make sure you have Rust [installed](https://www.rust-lang.org/tools/install) and run the following command
+- Make sure you have Rust [installed](https://www.rust-lang.org/tools/install) and run the following command
 
 ```bash
   cargo run
 ```
 
-That's it! 🎮
+- That's it! 🎮
 
 ## Is Bevy a good fit for game development?
 
