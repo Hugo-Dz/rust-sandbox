@@ -56,7 +56,6 @@ struct Lifetime(u32);
 #[derive(Component, Clone, Copy, Debug)]
 enum GrainType {
     Bone,
-    _Rock,
     Blood,
 }
 
@@ -116,9 +115,9 @@ fn setup(mut commands: Commands) {
 // Listen for mouse clicks to spawn grains
 fn add_grain(
     mut commands: Commands,
-    input: Res<Input<MouseButton>>,
-    asset_server: Res<AssetServer>,
     query: Query<&Window>,
+    asset_server: Res<AssetServer>,
+    input: Res<Input<MouseButton>>
 ) {
 
     if let Some(position) = query.single().cursor_position() {
@@ -325,7 +324,6 @@ fn update_grain_system(
             lifetime.0 += 1;
             match grain_type {
                 GrainType::Bone => handle_bone_grain(&grid_position, &grid_data),
-                GrainType::_Rock => { /* handle rock logic */ }
                 GrainType::Blood => {
                     if let Some(mut dir) = direction {
                         handle_blood_grain(&mut transform, &mut grid_position, &grid_data, &mut dir, lifetime.0);
