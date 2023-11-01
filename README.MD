@@ -60,19 +60,18 @@ After playing with it for a while, here are my pros and cons about Bevy:
 
 **Pros:**
 
-✅ The ECS design is very powerful and surprisingly satisfying to work with, especially for simulation or data driven games.
-✅ Written in the same language as your game.
-✅ Pretty simple and type-safe! (If you are done to learn a bit of Rust)
-✅ Customizable and extensible. If you want to build something very specific without reinveting the wheel, it's clearly a good choice.
+✅ The ECS design is very powerful and surprisingly satisfying to work with, especially for simulation or data driven games.  
+✅ Written in the same language as your game.  
+✅ Pretty simple and type-safe! (If you are done to learn a bit of Rust)  
+✅ Customizable and extensible. If you want to build something very specific without reinveting the wheel, it's clearly a good choice.  
 
 
 **Cons:**
 
-❌ No editor, everything sits in your IDE.
-❌ Lack of common features like particles.
-❌ Not really beginner friendly, you need to learn a bit of Rust.
+❌ No editor, everything sits in your IDE.  
+❌ Lack of common features like particles.  
+❌ Not really beginner friendly, you need to learn a bit of Rust.  
 ❌ Not as mature as other game engines, which means less examples and tutorials. That said, the community is very active and helpful on the [Discord](https://discord.gg/bevy)!
-
 
 ## License
 
