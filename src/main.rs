@@ -113,7 +113,7 @@ fn setup(mut commands: Commands) {
     ));
 }
 
-
+// Listen for mouse clicks to spawn grains
 fn add_grain(
     mut commands: Commands,
     input: Res<Input<MouseButton>>,
@@ -122,19 +122,19 @@ fn add_grain(
 ) {
 
     if let Some(position) = query.single().cursor_position() {
+
         let remaped_cursor_pos = remap_cursor_position(position, WINDOW_SIZE, [GAME_RESOLUTION_X, GAME_RESOLUTION_Y]);
+        let mut rng = rand::thread_rng();
 
         if input.pressed(MouseButton::Left) {
 
             // Create a bone sprite texture
-            let bone_textures: [Handle<Image>; 3] = [
-                asset_server.load("bone_1.png"),
-                asset_server.load("bone_2.png"),
-                asset_server.load("bone_3.png"),
+            let bone_textures: [&str; 3] = [
+                "bone_1.png",
+                "bone_2.png",
+                "bone_3.png"
             ];
-            let mut rng = rand::thread_rng();
             let random_index = rng.gen_range(0..bone_textures.len());
-            let bone_texture = bone_textures[random_index].clone();
         
             let bone_sprite_bundle = SpriteBundle {
                 sprite: Sprite {
@@ -142,11 +142,11 @@ fn add_grain(
                     anchor: Anchor::TopLeft,
                     ..default()
                 },
-                texture: bone_texture,
+                texture: asset_server.load(bone_textures[random_index]),
                 ..default()
             };
 
-            // Add a row (entity) with this set of components
+            // Add a data row (entity) with it's set of components
             commands
                 .spawn((
                     Grain,
@@ -173,21 +173,18 @@ fn add_grain(
         if input.pressed(MouseButton::Right) {
 
             // Creat a blood sprite texture
-            let blood_texture = asset_server.load("blood_2.png");
-
             let blood_sprite_bundle = SpriteBundle {
                 sprite: Sprite {
                     custom_size: Some(Vec2::new(1.0, 1.0)),
                     anchor: Anchor::TopLeft,
                     ..default()
                 },
-                texture: blood_texture,
+                texture: asset_server.load("blood_2.png"),
                 ..default()
             };
 
-            // Pick a random direction to slide to
-            let mut rng = rand::thread_rng();
-            let random_number = rng.gen::<f64>();
+            // Pick a random direction to slide toward
+            let random_number = rng.gen::<f32>();
 
             let random_direction = if random_number < 0.5 {
                 Direction::Left
@@ -195,6 +192,7 @@ fn add_grain(
                 Direction::Right
             };
 
+            // Add a data row (entity) with it's set of components
             commands
                 .spawn((
                     Grain,
