@@ -221,6 +221,7 @@ fn add_grain(
 fn handle_bone_grain(grid_position: &GridPosition, grid_data: &Grid) {
     // Ensure coordinates are in the grid
     if is_within_boundaries(grid_position, GAME_RESOLUTION_X as i32, GAME_RESOLUTION_Y as i32) {
+
         let maybe_grain_above = grid_data.get(grid_position.current_x as usize, (grid_position.current_y - 1) as usize);
 
         if let Some(grain_above) = maybe_grain_above {
@@ -240,6 +241,15 @@ fn is_within_boundaries(grid_position: &GridPosition, res_x: i32, res_y: i32) ->
     grid_position.current_x >= 1 && grid_position.current_x < res_x - 1 && grid_position.current_y >= 0 && grid_position.current_y < res_y - 1
 }
 
+fn move_grain(transform: &mut Transform, grid_position: &mut GridPosition, x: i32, y: i32) {
+    transform.translation.x += x as f32;
+    transform.translation.y -= y as f32;
+    grid_position.prev_x = Some(grid_position.current_x);
+    grid_position.prev_y = Some(grid_position.current_y);
+    grid_position.current_x += x;
+    grid_position.current_y += y;
+}
+
 fn handle_blood_grain(
     transform: &mut Transform,
     grid_position: &mut GridPosition,
@@ -248,11 +258,8 @@ fn handle_blood_grain(
     lifetime: u32
 ) {
     // Ensure coordinates are in the grid
-    if grid_position.current_x >= 1
-        && grid_position.current_x < GAME_RESOLUTION_X as i32 - 1
-        && grid_position.current_y >= 0
-        && grid_position.current_y < GAME_RESOLUTION_Y as i32 - 1
-    {
+    if is_within_boundaries(grid_position, GAME_RESOLUTION_X as i32, GAME_RESOLUTION_Y as i32) {
+
         let maybe_grain_below = grid_data.get(grid_position.current_x as usize, (grid_position.current_y + 1) as usize);
         let maybe_grain_right = grid_data.get((grid_position.current_x + 1) as usize, grid_position.current_y as usize);
         let maybe_grain_left = grid_data.get((grid_position.current_x - 1) as usize, grid_position.current_y as usize);
@@ -260,7 +267,7 @@ fn handle_blood_grain(
         match maybe_grain_below {
             Some(_) => {
 
-                // Do nothing if the after a long time or before a short time (to avoid grain behavior in the air after spawning)
+                // Do nothing (to avoid grain behavior in the air just after spawning)
                 if lifetime < 5 {
                     return;
                 }
@@ -273,20 +280,10 @@ fn handle_blood_grain(
                                 *direction = Direction::Right;
                             }
                         }
-                        Direction::Right => {
-                            transform.translation.x += 1.0;
-                            grid_position.prev_x = Some(grid_position.current_x);
-                            grid_position.prev_y = Some(grid_position.current_y);
-                            grid_position.current_x += 1;
-                        }
+                        Direction::Right => move_grain(transform, grid_position, 1, 0)
                     },
                     (None, Some(_)) => match direction {
-                        Direction::Left => {
-                            transform.translation.x -= 1.0;
-                            grid_position.prev_x = Some(grid_position.current_x);
-                            grid_position.prev_y = Some(grid_position.current_y);
-                            grid_position.current_x -= 1;
-                        }
+                        Direction::Left => move_grain(transform, grid_position, -1, 0),
                         Direction::Right => {
                             if lifetime < BLOOD_SAFE_TIME {
                                 *direction = Direction::Left;
@@ -294,17 +291,9 @@ fn handle_blood_grain(
                         }
                     },
                     (None, None) => {
-                        if *direction == Direction::Right {
-                            transform.translation.x += 1.0;
-                            grid_position.prev_x = Some(grid_position.current_x);
-                            grid_position.prev_y = Some(grid_position.current_y);
-                            grid_position.current_x += 1;
-                        }
-                        if *direction == Direction::Left {
-                            transform.translation.x -= 1.0;
-                            grid_position.prev_x = Some(grid_position.current_x);
-                            grid_position.prev_y = Some(grid_position.current_y);
-                            grid_position.current_x -= 1;
+                        match *direction {
+                            Direction::Right => move_grain(transform, grid_position, 1, 0),
+                            Direction::Left => move_grain(transform, grid_position, -1, 0)
                         }
                     }
                     (Some(_), Some(_)) => { /* Do nothing, stay in place */ }
@@ -312,10 +301,7 @@ fn handle_blood_grain(
             }
             None => {
                 // No grain below, just fall
-                transform.translation.y -= 1.0;
-                grid_position.prev_x = Some(grid_position.current_x);
-                grid_position.prev_y = Some(grid_position.current_y);
-                grid_position.current_y += 1;
+                move_grain(transform, grid_position, 0, 1)
             }
         }
     }
