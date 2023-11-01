@@ -358,26 +358,26 @@ fn shade_blood(
 }
 
 fn update_grid_data(mut query: Query<(&GrainType, &mut GridPosition)>, mut grid_data: ResMut<Grid>) {
-    for (grain_type, mut pos) in query.iter_mut() {
+    for (grain_type, mut grid_position) in query.iter_mut() {
         // Clear the previous position from the grid
-        if let (Some(prev_x), Some(prev_y)) = (pos.prev_x, pos.prev_y) {
+        if let (Some(prev_x), Some(prev_y)) = (grid_position.prev_x, grid_position.prev_y) {
             if prev_x >= 0 && prev_y >= 0 && prev_x < GAME_RESOLUTION_X as i32 && prev_y < GAME_RESOLUTION_Y as i32 {
                 grid_data.data[prev_y as usize][prev_x as usize] = None;
             }
         }
 
         // Boundary checks for current positions
-        if pos.current_x >= 0
-            && pos.current_x < GAME_RESOLUTION_X as i32
-            && pos.current_y >= 0
-            && pos.current_y < GAME_RESOLUTION_Y as i32
+        if grid_position.current_x >= 0
+            && grid_position.current_x < GAME_RESOLUTION_X as i32
+            && grid_position.current_y >= 0
+            && grid_position.current_y < GAME_RESOLUTION_Y as i32
         {
             // Update the grid with the new position
-            grid_data.set(pos.current_x as usize, pos.current_y as usize, *grain_type);
+            grid_data.set(grid_position.current_x as usize, grid_position.current_y as usize, *grain_type);
         }
 
         // Update prev for next frame
-        pos.prev_x = Some(pos.current_x);
-        pos.prev_y = Some(pos.current_y);
+        grid_position.prev_x = Some(grid_position.current_x);
+        grid_position.prev_y = Some(grid_position.current_y);
     }
 }
