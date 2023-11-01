@@ -18,6 +18,8 @@ Make sure you have Rust [installed](https://www.rust-lang.org/tools/install) and
   cargo run
 ```
 
+That's it! 🎮
+
 ## Is Bevy a good fit for game development?
 
 Bevy [ECS](https://bevy-cheatbook.github.io/programming/intro-data.html) design was very pleasing to work with, it completely changes the way we can implement game logic compared to the Object-oriented paradigm.
