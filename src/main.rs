@@ -12,6 +12,7 @@ const GAME_RESOLUTION_X: usize = 80;
 const GAME_RESOLUTION_Y: usize = 60;
 const WINDOW_SIZE: [f32; 2] = [640.0, 480.0];
 const TICK_RATE: u32 = 1;
+const BLOOD_SAFE_TIME: u32 = 200; // Time to stop blood interaction to avoid infinite back and forth movement
 
 #[derive(Resource)]
 struct TickCounter {
@@ -46,6 +47,34 @@ impl Grid {
     }
 }
 
+#[derive(Component)]
+struct Grain;
+
+#[derive(Component)]
+struct Lifetime(u32);
+
+#[derive(Component, Clone, Copy, Debug)]
+enum GrainType {
+    Bone,
+    _Rock,
+    Blood,
+}
+
+#[derive(Component)]
+struct GridPosition {
+    current_x: i32,
+    current_y: i32,
+    prev_x: Option<i32>,
+    prev_y: Option<i32>,
+}
+
+#[derive(Component, PartialEq)]
+enum Direction {
+    Right,
+    Left,
+}
+
+// Main function
 fn main() {
     App::new()
         .add_plugins((
@@ -75,6 +104,7 @@ fn main() {
         .run();
 }
 
+// Setup and spawn the camera
 fn setup(mut commands: Commands) {
     commands.spawn(PixelCameraBundle::from_resolution(
         GAME_RESOLUTION_X as i32,
@@ -82,37 +112,6 @@ fn setup(mut commands: Commands) {
         true,
     ));
 }
-
-#[derive(Component)]
-struct Grain;
-
-#[derive(Component)]
-struct Lifetime(u32);
-
-#[derive(Component, Clone, Copy, Debug)]
-enum GrainType {
-    Bone,
-    _Rock,
-    Blood,
-}
-
-#[derive(Component)]
-struct GridPosition {
-    current_x: i32,
-    current_y: i32,
-    prev_x: Option<i32>,
-    prev_y: Option<i32>,
-}
-
-#[derive(Component, PartialEq)]
-enum Direction {
-    Right,
-    Left,
-}
-
-#[derive(Component, PartialEq)]
-struct CompleteBackForth(bool);
-
 
 
 fn add_grain(
@@ -208,8 +207,7 @@ fn add_grain(
                         current_y: remaped_cursor_pos.y.round() as i32,
                         prev_x: None,
                         prev_y: None,
-                    },
-                    CompleteBackForth(false)
+                    }
                 ))
                 .insert(Transform {
                     translation: Vec3::new(
@@ -223,7 +221,7 @@ fn add_grain(
     }
 }
 
-fn handle_bone_grain(transform: &mut Transform, grid_position: &mut GridPosition, grid_data: &Grid, lifetime: u32) {
+fn handle_bone_grain(_transform: &mut Transform, grid_position: &mut GridPosition, grid_data: &Grid, _lifetime: u32) {
     // Ensure coordinates are in the grid
     if grid_position.current_x >= 1
         && grid_position.current_x < GAME_RESOLUTION_X as i32 - 1
@@ -249,8 +247,7 @@ fn handle_blood_grain(
     grid_position: &mut GridPosition,
     grid_data: &Grid,
     direction: &mut Direction,
-    lifetime: u32,
-    complete_back_forth_cycle: &mut CompleteBackForth
+    lifetime: u32
 ) {
     // Ensure coordinates are in the grid
     if grid_position.current_x >= 1
@@ -274,9 +271,8 @@ fn handle_blood_grain(
                 match (maybe_grain_left, maybe_grain_right) {
                     (Some(_), None) => match direction {
                         Direction::Left => {
-                            if !complete_back_forth_cycle.0 {
+                            if lifetime < BLOOD_SAFE_TIME {
                                 *direction = Direction::Right;
-                                complete_back_forth_cycle.0 = true;
                             }
                         }
                         Direction::Right => {
@@ -294,9 +290,8 @@ fn handle_blood_grain(
                             grid_position.current_x -= 1;
                         }
                         Direction::Right => {
-                            if !complete_back_forth_cycle.0 {
+                            if lifetime < BLOOD_SAFE_TIME {
                                 *direction = Direction::Left;
-                                complete_back_forth_cycle.0 = true;
                             }
                         }
                     },
@@ -335,7 +330,6 @@ fn update_grain_system(
         &mut GridPosition,
         &GrainType,
         &mut Lifetime,
-        Option<&mut CompleteBackForth>,
         Option<&mut Direction>,
     )>,
     mut tick_counter: ResMut<TickCounter>,
@@ -343,14 +337,14 @@ fn update_grain_system(
     tick_counter.count += 1;
     if tick_counter.count >= tick_counter.tick_rate {
         tick_counter.count = 0;
-        for (mut transform, mut grid_position, grain_type, mut lifetime, cycle,  direction) in query.iter_mut() {
+        for (mut transform, mut grid_position, grain_type, mut lifetime, direction) in query.iter_mut() {
             lifetime.0 += 1;
             match grain_type {
                 GrainType::Bone => handle_bone_grain(&mut transform, &mut grid_position, &grid_data, lifetime.0),
                 GrainType::_Rock => { /* handle rock logic */ }
                 GrainType::Blood => {
-                    if let (Some(mut dir), Some(mut cycle)) = (direction, cycle) {
-                        handle_blood_grain(&mut transform, &mut grid_position, &grid_data, &mut dir, lifetime.0, &mut cycle);
+                    if let Some(mut dir) = direction {
+                        handle_blood_grain(&mut transform, &mut grid_position, &grid_data, &mut dir, lifetime.0);
                     }
                 }
             }
