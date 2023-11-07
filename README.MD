@@ -21,6 +21,32 @@ A little sandbox simulation done without physics, just for fun and to learn a bi
 
 - That's it! 🎮
 
+## Build for the web
+
+- Install wasm32-unknown-unknown to compile to web assembly
+
+```bash
+  rustup target add wasm32-unknown-unknown
+```
+
+- Install the `wasm-bindgen-cli` tool
+
+```bash
+  cargo install -f wasm-bindgen-cli
+```
+
+- Build the project
+
+```bash
+   wasm-bindgen --out-dir ./out/ --target web ./target/wasm32-unknown-unknown/release/sandbox_bevy.wasm
+```
+
+You should now have a fresh /out folder at the root of your project. You can now serve the game with any web server of your choice. Don't forget to call the `init()` function before the `main()` function in your web app!
+
+- Example with SvelteKit
+
+- [ ] TODO
+
 ## Is Bevy a good fit for game development?
 
 Bevy [ECS](https://bevy-cheatbook.github.io/programming/intro-data.html) design was very pleasing to work with, it completely changes the way we can implement game logic compared to the Object-oriented paradigm.
