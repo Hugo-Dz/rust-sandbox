@@ -21,6 +21,78 @@ A little sandbox simulation done without physics, just for fun and to learn a bi
 
 - That's it! 🎮
 
+## Build for the web
+
+- Install wasm32-unknown-unknown to compile to web assembly
+
+```bash
+  rustup target add wasm32-unknown-unknown
+```
+
+- Install the `wasm-bindgen-cli` tool
+
+```bash
+  cargo install -f wasm-bindgen-cli
+```
+
+- Build the project
+
+```bash
+  cargo build --release --target wasm32-unknown-unknown
+  wasm-bindgen --out-dir ./out/ --target web ./target/wasm32-unknown-unknown/release/sandbox_bevy.wasm
+```
+
+You should now have a fresh /out folder at the root of your project containing all you need to run your game in a web browser. You can now serve the game with any web server of your choice. Just call the `init()` function from the generated `sandbox_bevy.js` file.
+
+```html
+  <script type="module">
+    import init from './sandbox_bevy.js';
+    init();
+  </script>
+```
+
+This will automatically load the wasm module and initialize the game in a new canvas element.
+
+If you want to use your own HTML canvas element, you can specify it in the `Window` Bevy plugin:
+  
+```rust
+  fn main() {
+      App::new()
+          .add_plugins((
+              DefaultPlugins
+                  .set(WindowPlugin {
+                      primary_window: Some(Window {
+                          // Here!
+                          canvas: Some("#bevy-canvas".to_string()),
+                          ..default()
+                      }),
+                  })
+                  .build(),
+          ))
+          .run();
+  }
+```
+
+- Example with SvelteKit
+
+```html
+  <script lang="ts">
+
+      // Wasm module
+      import init from "$lib/pkg/sandbox_bevy";
+
+      // Svelte
+      import { onMount } from "svelte";
+
+      onMount(() => init() )
+
+  </script>
+```
+
+- Try it on Hugging Face
+
+- [ ] TODO LINK
+
 ## Is Bevy a good fit for game development?
 
 Bevy [ECS](https://bevy-cheatbook.github.io/programming/intro-data.html) design was very pleasing to work with, it completely changes the way we can implement game logic compared to the Object-oriented paradigm.
