@@ -89,9 +89,9 @@ If you want to use your own HTML canvas element, you can specify it in the `Wind
   </script>
 ```
 
-- Try it on Hugging Face
+## Try it on Hugging Face
 
-[Demo](https://huggingface.co/spaces/HugoDzz/rust-sandbox) on Hugging Face
+A [Demo](https://huggingface.co/spaces/HugoDzz/rust-sandbox) built for the web is on Hugging Face! You can play with it directly in your browser.
 
 ## Is Bevy a good fit for game development?
 
