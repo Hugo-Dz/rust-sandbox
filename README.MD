@@ -91,7 +91,7 @@ If you want to use your own HTML canvas element, you can specify it in the `Wind
 
 ## Try it on the web
 
-A [Demo](https://rustsandbox.com) built for the web with SvelteKit is available!
+A [Demo](https://rustsandbox.com) built for the web with SvelteKit is available, feel free to play around it!
 
 ## Try it on Hugging Face
 
